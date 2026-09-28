@@ -43,7 +43,7 @@ async def iniciar_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📧 Por favor, digite o seu **e-mail** de acesso da IQ Option:")
     return EMAIL
 
-async func_receber_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def func_receber_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Passo 2: Salva o e-mail e pede a senha"""
     USER_SESSION["email"] = update.message.text.strip()
     await update.message.reply_text("🔑 Perfeito. Agora digite a sua **senha** da IQ Option:")
@@ -120,7 +120,7 @@ async def func_receber_stop_loss(update: Update, context: ContextTypes.DEFAULT_T
         f"💵 Entrada por Ordem: `R$ {USER_SESSION['entrada_base']:.2f}`\n"
         f"🎯 Stop Win: `+R$ {USER_SESSION['stop_win']:.2f}`\n"
         f"🛡️ Stop Loss: `-R$ {USER_SESSION['stop_loss']:.2f}`\n\n"
-        f"🚀 O bot está conectado na IQ Option e pronto! Envie o comando `/operar` para testar o envio de um sinal e a entrada na corretora."
+        f"🚀 O bot está configurado! Envie o comando `/operar` para testar o envio de um sinal e a entrada na corretora."
     )
     return ConversationHandler.END
 
