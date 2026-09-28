@@ -1,5 +1,6 @@
 import os
 import time
+import asyncio
 import logging
 from telegram import Update
 from telegram.ext import (
@@ -13,7 +14,7 @@ from telegram.ext import (
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# Token inserido diretamente
+# Seu Token do Telegram configurado diretamente
 TELEGRAM_TOKEN = "8899179180:AAHVBgfZExT0P66RYFAO_j51ZC_YbFBbdZM"
 
 # Estados da Conversa Interativa
@@ -157,6 +158,13 @@ async def executar_ciclo_operacional(update: Update, context: ContextTypes.DEFAU
     )
 
 def main():
+    # Garante a criação do event loop para compatibilidade com versões novas do Python no Render
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     conv_handler = ConversationHandler(
@@ -176,7 +184,7 @@ def main():
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("operar", executar_ciclo_operacional))
 
-    print("🤖 Bot interativo rodando na nuvem...")
+    print("🤖 Bot interativo rodando na nuvem com sucesso...")
     app.run_polling()
 
 if __name__ == '__main__':
