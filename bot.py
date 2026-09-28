@@ -12,7 +12,6 @@ from telegram.ext import (
     filters
 )
 
-# Importação correta da classe na biblioteca da comunidade
 from iqoptionapi.stable_api import IQ_Option
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -39,13 +38,13 @@ USER_SESSION = {
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 **Bot IQ Option Pro - Conexão Real** 🤖\n\n"
-        "Este robô conecta diretamente na sua conta da corretora para operar de forma automatizada.\n\n"
-        "Para iniciar a autenticação segura, envie o comando: `/login`"
+        "🤖 **Bot IQ Option Pro - Conexão Direta** 🤖\n\n"
+        "Este robô utiliza a conexão via Python puro para operar na sua conta.\n\n"
+        "Para iniciar, envie o comando: `/login`"
     )
 
 async def iniciar_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📧 Por favor, digite o seu **e-mail** cadastrado na IQ Option:")
+    await update.message.reply_text("📧 Por favor, digite o seu **e-mail** da IQ Option:")
     return EMAIL
 
 async def func_receber_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,31 +55,44 @@ async def func_receber_email(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def func_receber_senha(update: Update, context: ContextTypes.DEFAULT_TYPE):
     USER_SESSION["senha"] = update.message.text.strip()
     
-    await update.message.reply_text("🔄 *Conectando aos servidores da IQ Option, aguarde um instante...*")
+    await update.message.reply_text("🔄 *Estabelecendo conexão direta com os servidores da corretora...*")
     
     try:
-        # Instancia corretamente usando IQ_Option
+        # Inicializa a classe de conexão oficial da API
         api = IQ_Option(USER_SESSION["email"], USER_SESSION["senha"])
+        
+        # Tenta conectar explicitamente
         check, reason = api.connect()
         
         if check:
             USER_SESSION["api"] = api
             USER_SESSION["logado"] = True
             await update.message.reply_text(
-                "✅ **Autenticação Real Realizada com Sucesso!**\n\n"
-                "🌐 Qual o tipo de conta que você deseja utilizar nas operações?\n"
+                "✅ **Conexão Direta Realizada com Sucesso!**\n\n"
+                "🌐 Qual o tipo de conta que você deseja operar?\n"
                 "Envie apenas: **DEMO** ou **REAL**"
             )
             return TIPO_CONTA
         else:
             USER_SESSION["logado"] = False
+            # Mensagem detalhada caso a corretora recuse por segurança ou dados incorretos
+            motivo_falha = str(reason) if reason else "Bloqueio de segurança/Credenciais inválidas"
             await update.message.reply_text(
-                f"❌ **Falha no Login da Corretora:** `{reason}`\n\n"
-                "Verifique suas credenciais e envie `/login` novamente."
+                f"❌ **Falha na Conexão:** `{motivo_falha}`\n\n"
+                "Dica: Se persistir, verifique se a conta possui autenticação de dois fatores ativa ou tente novamente com `/login`."
             )
             return ConversationHandler.END
+            
     except Exception as e:
-        await update.message.reply_text(f"⚠️ Erro crítico ao conectar na API: `{str(e)}`")
+        erro_msg = str(e)
+        if "Expecting value" in erro_msg or "JSONDecodeError" in erro_msg:
+            await update.message.reply_text(
+                "⚠️ **Aviso de Proteção da Corretora (Cloudflare):**\n"
+                "O servidor em nuvem teve o IP desafiado pela segurança da corretora. "
+                "Tente refazer o deploy no Render para alterar o IP ou use `/login` novamente em instantes."
+            )
+        else:
+            await update.message.reply_text(f"⚠️ Erro crítico na API: `{erro_msg}`")
         return ConversationHandler.END
 
 async def func_receber_conta(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -103,7 +115,7 @@ async def func_receber_conta(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     await update.message.reply_text(
         f"✅ Conta definida para: **{tipo}**\n"
-        f"💰 **Saldo Real na Corretora:** R$ {saldo_atual:.2f}\n\n"
+        f"💰 **Saldo Atual na Corretora:** R$ {saldo_atual:.2f}\n\n"
         "💵 Qual será o **valor da entrada base** para cada ordem? *(Ex: 2.0)*"
     )
     return ENTRADA
@@ -115,7 +127,7 @@ async def func_receber_entrada(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("⚠️ Digite um número válido. Exemplo: `2.0`")
         return ENTRADA
 
-    await update.message.reply_text("🎯 Qual é a sua meta de **Stop Win** (Lucro máximo diário)? *(Ex: 15.0)*")
+    await update.message.reply_text("🎯 Qual é a sua meta de **Stop Win** (Lucro diário)? *(Ex: 15.0)*")
     return STOP_WIN
 
 async def func_receber_stop_win(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -125,7 +137,7 @@ async def func_receber_stop_win(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text("⚠️ Digite um número válido. Exemplo: `15.0`")
         return STOP_WIN
 
-    await update.message.reply_text("🛡️ Qual é o seu limite de **Stop Loss** (Perda máxima permitida)? *(Ex: 10.0)*")
+    await update.message.reply_text("🛡️ Qual é o seu limite de **Stop Loss** (Perda máxima)? *(Ex: 10.0)*")
     return STOP_LOSS
 
 async def func_receber_stop_loss(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -139,14 +151,14 @@ async def func_receber_stop_loss(update: Update, context: ContextTypes.DEFAULT_T
     conta_txt = "🟢 CONTA DEMO (Prática)" if USER_SESSION["tipo_conta"] == "PRACTICE" else "🔴 CONTA REAL"
     
     await update.message.reply_text(
-        f"🎉 **CONFIGURAÇÃO E CONEXÃO PRONTAS!** 🎉\n\n"
+        f"🎉 **CONFIGURAÇÃO CONCLUÍDA!** 🎉\n\n"
         f"🌐 Modo: {conta_txt}\n"
         f"📧 Conta: `{USER_SESSION['email']}`\n"
-        f"💼 Banca Atualizada: **R$ {USER_SESSION['banca_atual']:.2f}**\n"
+        f"💼 Banca Atual: **R$ {USER_SESSION['banca_atual']:.2f}**\n"
         f"💵 Entrada por Ordem: `R$ {USER_SESSION['entrada_base']:.2f}`\n"
         f"🎯 Stop Win: `+R$ {USER_SESSION['stop_win']:.2f}`\n"
         f"🛡️ Stop Loss: `-R$ {USER_SESSION['stop_loss']:.2f}`\n\n"
-        f"🚀 O bot está pronto. Envie o comando `/operar` para testar uma ordem real agora!"
+        f"🚀 Tudo pronto! Envie o comando `/operar` para executar uma ordem real na corretora."
     )
     return ConversationHandler.END
 
@@ -166,18 +178,18 @@ async def executar_ciclo_operacional(update: Update, context: ContextTypes.DEFAU
     valor = USER_SESSION["entrada_base"]
 
     await update.message.reply_text(
-        f"🤖 **ANÁLISE DE IA - GATILHO ACIONADO** 🤖\n\n"
+        f"🤖 **EXECUTANDO ORDEM DIRETA** 🤖\n\n"
         f"📊 Par: `{par}`\n"
         f"⏱ Direção: **{direcao.upper()}**\n"
-        f"💵 Valor da Ordem: `R$ {valor:.2f}`\n\n"
-        f"⚡ *Enviando ordem real para a corretora...*"
+        f"💵 Valor: `R$ {valor:.2f}`\n\n"
+        f"⚡ *Enviando requisição para a API da corretora...*"
     )
 
     try:
         check, order_id = api.buy(valor, par, direcao, duracao)
         
         if check:
-            await update.message.reply_text(f"✅ Ordem enviada com sucesso! ID: `{order_id}`. Aguardando expiração...")
+            await update.message.reply_text(f"✅ Ordem aceita! ID: `{order_id}`. Aguardando expiração...")
             
             time.sleep(65)
             
@@ -189,17 +201,17 @@ async def executar_ciclo_operacional(update: Update, context: ContextTypes.DEFAU
             status_financeiro = f"+R$ {diferenca_total:.2f}" if diferenca_total >= 0 else f"-R$ {abs(diferenca_total):.2f}"
 
             await update.message.reply_text(
-                f"🏁 **RESULTADO DA OPERAÇÃO: {resultado}**\n\n"
+                f"🏁 **RESULTADO: {resultado}**\n\n"
                 f"📊 Par: `{par}`\n"
                 f"💵 Lucro/Prejuízo: `R$ {lucro:.2f}`\n\n"
-                f"📉 **PAINEL DA BANCA EM TEMPO REAL:**\n"
+                f"📉 **PAINEL DA BANCA:**\n"
                 f"💼 **Banca Atual:** **R$ {USER_SESSION['banca_atual']:.2f}**\n"
                 f"📈 **Acumulado:** `{status_financeiro}`"
             )
         else:
             await update.message.reply_text("⚠️ A corretora rejeitou a ordem enviada.")
     except Exception as e:
-        await update.message.reply_text(f"❌ Erro na execução da ordem: `{str(e)}`")
+        await update.message.reply_text(f"❌ Erro ao processar a ordem: `{str(e)}`")
 
 def main():
     try:
@@ -227,7 +239,7 @@ def main():
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("operar", executar_ciclo_operacional))
 
-    print("🤖 Bot real da IQ Option rodando na nuvem...")
+    print("🤖 Bot de conexão direta rodando na nuvem...")
     app.run_polling()
 
 if __name__ == '__main__':
