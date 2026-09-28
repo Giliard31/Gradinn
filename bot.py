@@ -12,8 +12,8 @@ from telegram.ext import (
     filters
 )
 
-# Importação da API da IQ Option
-from iqoptionapi.stable_api import IQOption
+# Importação correta da classe na biblioteca da comunidade
+from iqoptionapi.stable_api import IQ_Option
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -23,12 +23,11 @@ TELEGRAM_TOKEN = "8899179180:AAHVBgfZExT0P66RYFAO_j51ZC_YbFBbdZM"
 # Estados da Conversa Interativa de Login e Configuração
 EMAIL, SENHA, TIPO_CONTA, ENTRADA, STOP_WIN, STOP_LOSS = range(6)
 
-# Sessão do Usuário e Instância da Conexão
 USER_SESSION = {
     "api": None,
     "email": "",
     "senha": "",
-    "tipo_conta": "PRACTICE", # PRACTICE ou REAL
+    "tipo_conta": "PRACTICE",
     "banca_inicial": 0.0,
     "banca_atual": 0.0,
     "entrada_base": 2.0,
@@ -41,7 +40,7 @@ USER_SESSION = {
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 **Bot IQ Option Pro - Conexão Real** 🤖\n\n"
-        "Este robô conecta diretamente na sua conta da corretora, catalisa e opera de forma automatizada.\n\n"
+        "Este robô conecta diretamente na sua conta da corretora para operar de forma automatizada.\n\n"
         "Para iniciar a autenticação segura, envie o comando: `/login`"
     )
 
@@ -57,11 +56,11 @@ async def func_receber_email(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def func_receber_senha(update: Update, context: ContextTypes.DEFAULT_TYPE):
     USER_SESSION["senha"] = update.message.text.strip()
     
-    # Tentativa de Conexão Real com a Corretora
     await update.message.reply_text("🔄 *Conectando aos servidores da IQ Option, aguarde um instante...*")
     
     try:
-        api = IQOption(USER_SESSION["email"], USER_SESSION["senha"])
+        # Instancia corretamente usando IQ_Option
+        api = IQ_Option(USER_SESSION["email"], USER_SESSION["senha"])
         check, reason = api.connect()
         
         if check:
@@ -69,7 +68,7 @@ async def func_receber_senha(update: Update, context: ContextTypes.DEFAULT_TYPE)
             USER_SESSION["logado"] = True
             await update.message.reply_text(
                 "✅ **Autenticação Real Realizada com Sucesso!**\n\n"
-                "🌐 Agora, qual o tipo de conta que você deseja utilizar nas operações?\n"
+                "🌐 Qual o tipo de conta que você deseja utilizar nas operações?\n"
                 "Envie apenas: **DEMO** ou **REAL**"
             )
             return TIPO_CONTA
@@ -98,7 +97,6 @@ async def func_receber_conta(update: Update, context: ContextTypes.DEFAULT_TYPE)
         api.change_balance("REAL")
         USER_SESSION["tipo_conta"] = "REAL"
     
-    # Captura o saldo real direto da corretora
     saldo_atual = api.get_balance()
     USER_SESSION["banca_inicial"] = saldo_atual
     USER_SESSION["banca_atual"] = saldo_atual
@@ -148,7 +146,7 @@ async def func_receber_stop_loss(update: Update, context: ContextTypes.DEFAULT_T
         f"💵 Entrada por Ordem: `R$ {USER_SESSION['entrada_base']:.2f}`\n"
         f"🎯 Stop Win: `+R$ {USER_SESSION['stop_win']:.2f}`\n"
         f"🛡️ Stop Loss: `-R$ {USER_SESSION['stop_loss']:.2f}`\n\n"
-        f"🚀 O bot está monitorando os gráficos em segundo plano. Envie `/operar` para forçar um ciclo de entrada ou aguarde os gatalhos automáticos!"
+        f"🚀 O bot está pronto. Envie o comando `/operar` para testar uma ordem real agora!"
     )
     return ConversationHandler.END
 
@@ -157,15 +155,14 @@ async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def executar_ciclo_operacional(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Executa a ordem real na IQ Option e retorna o resultado no Telegram"""
     if not USER_SESSION["logado"] or not USER_SESSION["configurado"]:
         await update.message.reply_text("⚠️ Você precisa concluir o login e a configuração primeiro enviando `/login`.")
         return
 
     api = USER_SESSION["api"]
     par = "EURUSD-OTC"
-    direcao = "call" # 'call' ou 'put'
-    duracao = 1 # expiração em 1 minuto
+    direcao = "call"
+    duracao = 1
     valor = USER_SESSION["entrada_base"]
 
     await update.message.reply_text(
@@ -173,20 +170,17 @@ async def executar_ciclo_operacional(update: Update, context: ContextTypes.DEFAU
         f"📊 Par: `{par}`\n"
         f"⏱ Direção: **{direcao.upper()}**\n"
         f"💵 Valor da Ordem: `R$ {valor:.2f}`\n\n"
-        f"⚡ *Enviando ordem de compra real para a corretora...*"
+        f"⚡ *Enviando ordem real para a corretora...*"
     )
 
-    # Execução real da ordem na API da IQ Option
     try:
         check, order_id = api.buy(valor, par, direcao, duracao)
         
         if check:
-            await update.message.reply_text(f"✅ Ordem executada com ID: `{order_id}`. Aguardando expiração...")
+            await update.message.reply_text(f"✅ Ordem enviada com sucesso! ID: `{order_id}`. Aguardando expiração...")
             
-            # Aguarda o tempo de expiração da vela (60 segundos + margem)
             time.sleep(65)
             
-            # Verifica o lucro obtido na ordem
             lucro = api.get_profit(order_id)
             USER_SESSION["banca_atual"] = api.get_balance()
             
@@ -197,13 +191,13 @@ async def executar_ciclo_operacional(update: Update, context: ContextTypes.DEFAU
             await update.message.reply_text(
                 f"🏁 **RESULTADO DA OPERAÇÃO: {resultado}**\n\n"
                 f"📊 Par: `{par}`\n"
-                f"💵 Lucro/Prejuízo da Ordem: `R$ {lucro:.2f}`\n\n"
+                f"💵 Lucro/Prejuízo: `R$ {lucro:.2f}`\n\n"
                 f"📉 **PAINEL DA BANCA EM TEMPO REAL:**\n"
                 f"💼 **Banca Atual:** **R$ {USER_SESSION['banca_atual']:.2f}**\n"
-                f"📈 **Acumulado do Dia:** `{status_financeiro}`"
+                f"📈 **Acumulado:** `{status_financeiro}`"
             )
         else:
-            await update.message.reply_text("⚠️ A corretora rejeitou a ordem no momento do envio.")
+            await update.message.reply_text("⚠️ A corretora rejeitou a ordem enviada.")
     except Exception as e:
         await update.message.reply_text(f"❌ Erro na execução da ordem: `{str(e)}`")
 
